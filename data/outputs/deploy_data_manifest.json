@@ -1,0 +1,7 @@
+{
+  "created_for": "Streamlit deployment demo data",
+  "scenario_run": "scenario_experiments/smart_dynamic_20260507_021939_089988",
+  "sample_run": "scenario_baseline_smart_dynamic/20260507_145919",
+  "sample_peak_day": 258,
+  "note": "Bundled compact data. Upload a ZIP to replace with local evidence outputs."
+}
