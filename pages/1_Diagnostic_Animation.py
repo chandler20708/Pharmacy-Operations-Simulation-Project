@@ -11,9 +11,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.components.diagnostic_animation import render_window_animation
-from app.components.stakeholder_controls import select_context
-from app.core.sample_outputs import daily_kpis, latest_sample_run, role_activity_window, task_events_window, window_summary
+from components.diagnostic_animation import render_window_animation
+from components.stakeholder_controls import select_context
+from core.sample_outputs import daily_kpis, latest_sample_run, role_activity_window, task_events_window, window_summary
 
 
 st.set_page_config(page_title="Diagnostic Animation", layout="wide")

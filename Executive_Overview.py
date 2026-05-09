@@ -10,12 +10,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.components.dashboard_views import kpi_table
-from app.components.stakeholder_controls import select_context
-from app.core.cost_effectiveness import DEFAULT_WEIGHTS, build_ranking, load_strategy_proxy
-from app.core.metrics import comparison_snapshot, diagnostics_table, metric_delta_label
-from app.core.sample_outputs import latest_sample_run, sample_patient_journeys, sample_run_plots, sample_task_events
-from app.core.scenario_manifest import assumption_delta_rows, build_scenario_manifest, get_scenario_info
+from components.dashboard_views import kpi_table
+from components.stakeholder_controls import select_context
+from core.cost_effectiveness import DEFAULT_WEIGHTS, build_ranking, load_strategy_proxy
+from core.metrics import comparison_snapshot, diagnostics_table, metric_delta_label
+from core.sample_outputs import latest_sample_run, sample_patient_journeys, sample_run_plots, sample_task_events
+from core.scenario_manifest import assumption_delta_rows, build_scenario_manifest, get_scenario_info
 
 
 st.set_page_config(page_title="Executive Overview", layout="wide")
