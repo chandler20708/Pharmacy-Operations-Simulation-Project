@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import polars as pl
 
-from app.core.metrics import select_scenario
+from core.metrics import select_scenario
 
 
 def build_summary(

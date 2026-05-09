@@ -5,8 +5,8 @@ from pathlib import Path
 
 import streamlit as st
 
-from app.core.cost_effectiveness import DEFAULT_WEIGHTS, load_strategy_proxy
-from app.core.data_loader import (
+from core.cost_effectiveness import DEFAULT_WEIGHTS, load_strategy_proxy
+from core.data_loader import (
     ScenarioOutputBundle,
     discover_scenario_runs,
     load_run,
@@ -14,7 +14,7 @@ from app.core.data_loader import (
     run_display_label,
     scenario_names,
 )
-from app.core.scenario_manifest import (
+from core.scenario_manifest import (
     build_scenario_manifest,
     scenario_options_with_labels,
 )

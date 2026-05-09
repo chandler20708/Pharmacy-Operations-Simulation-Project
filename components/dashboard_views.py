@@ -3,14 +3,14 @@ from __future__ import annotations
 import polars as pl
 import streamlit as st
 
-from app.core.cost_effectiveness import build_ranking
-from app.core.metrics import (
+from core.cost_effectiveness import build_ranking
+from core.metrics import (
     comparison_snapshot,
     delta_color,
     metric_delta_label,
     metric_interpretation,
 )
-from app.core.scenario_manifest import get_scenario_info
+from core.scenario_manifest import get_scenario_info
 
 
 def ranking_frame(ctx) -> pl.DataFrame:
