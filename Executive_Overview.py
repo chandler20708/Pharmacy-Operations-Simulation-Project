@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 
+import plotly.graph_objects as go
 import polars as pl
 import streamlit as st
 
@@ -13,9 +14,14 @@ if str(PROJECT_ROOT) not in sys.path:
 from components.dashboard_views import kpi_table
 from components.stakeholder_controls import select_context
 from core.cost_effectiveness import DEFAULT_WEIGHTS, build_ranking, load_strategy_proxy
-from core.metrics import comparison_snapshot, diagnostics_table, metric_delta_label
+from core.metrics import comparison_snapshot, diagnostics_table, metric_delta_label, scenario_delta_table
 from core.sample_outputs import latest_sample_run, sample_patient_journeys, sample_run_plots, sample_task_events
-from core.scenario_manifest import assumption_delta_rows, build_scenario_manifest, get_scenario_info
+from core.scenario_manifest import (
+    assumption_delta_rows,
+    build_scenario_manifest,
+    get_scenario_info,
+    scenario_classification,
+)
 
 
 st.set_page_config(page_title="Executive Overview", layout="wide")
@@ -23,7 +29,7 @@ st.set_page_config(page_title="Executive Overview", layout="wide")
 
 def main() -> None:
     st.title("Executive Overview")
-    st.caption("Pharmacy Flow Strategy Lab: a patient-first view of scenario results.")
+    st.caption("NHS clinical pharmacy DES scenario results for managerial comparison.")
 
     context = select_context()
     if context is None:
@@ -56,18 +62,19 @@ def main() -> None:
 
     _render_decision_line(scenario_info, selected, baseline_row, rank_row)
     _render_key_metrics(selected, baseline_row)
+    _render_scenario_results_table(bundle, manifest, ranking, baseline)
     _render_patient_time_chart(selected, baseline_row)
     _render_flow_animation()
     _render_patient_journey(bundle, context.data_source.outputs_root)
     _render_plain_language_interpretation(scenario_info, selected, baseline_row, rank_row)
 
     st.info(
-        "Use the Diagnostic Animation page to choose a KPI spike and inspect the patient and staff "
-        "interactions inside that time window."
+        "The Scenario Flow Viewer shows how a high-pressure simulated window creates queues, staff handoffs, "
+        "and role bottlenecks for the selected assignment rule."
     )
 
-    with st.expander("Technical details for analysts"):
-        st.subheader("KPI Table")
+    with st.expander("Scenario assumptions and run status"):
+        st.subheader("Selected KPI Table")
         st.dataframe(kpi_table(snapshot, baseline, scenario), width="stretch", hide_index=True)
         st.subheader("Scenario Assumption Changes")
         st.dataframe(
@@ -75,7 +82,7 @@ def main() -> None:
             width="stretch",
             hide_index=True,
         )
-        st.subheader("Diagnostics")
+        st.subheader("Run Status")
         st.dataframe(
             diagnostics_table(bundle.summary, bundle.queue_lengths, baseline=baseline, scenario=scenario),
             width="stretch",
@@ -98,10 +105,11 @@ def _render_decision_line(scenario_info, selected: dict, baseline_row: dict, ran
     category = rank_row.get("category", "Unclassified") if rank_row else "Unclassified"
     st.markdown(
         f"### {scenario_info.label}\n"
-        f"**{category}.** Compared with baseline: patient time changes by **{time_delta:+.0f} min**, "
+        f"**{scenario_info.family}. {category}.** Compared with baseline: patient time changes by **{time_delta:+.0f} min**, "
         f"worst queue wait changes by **{wait_delta:+.0f} min**, and MedRec within 24h changes by "
         f"**{medrec_delta:+.1f} pp**."
     )
+    st.caption(scenario_info.description)
 
 
 def _render_key_metrics(selected: dict, baseline_row: dict) -> None:
@@ -123,21 +131,94 @@ def _render_key_metrics(selected: dict, baseline_row: dict) -> None:
         )
 
 
+def _render_scenario_results_table(bundle, manifest: dict, ranking: pl.DataFrame, baseline: str) -> None:
+    st.subheader("Scenario Results")
+    deltas = scenario_delta_table(bundle.summary, baseline=baseline)
+    if deltas.height == 0:
+        st.info("No scenario result table was found in this output bundle.")
+        return
+
+    rank_rows = {row["scenario"]: row for row in ranking.to_dicts()} if ranking.height else {}
+    ordered = sorted(
+        deltas.to_dicts(),
+        key=lambda row: (
+            0 if row.get("scenario") == baseline else 1,
+            _to_float(row.get("mean_time_in_system_minutes_delta")),
+        ),
+    )
+    rows = []
+    for row in ordered:
+        scenario = str(row.get("scenario", ""))
+        group = str(row.get("group") or "")
+        info = get_scenario_info(manifest, scenario, group)
+        rank_row = rank_rows.get(scenario, {})
+        rows.append(
+            {
+                "scenario": info.label,
+                "model_id": scenario,
+                "family": info.family,
+                "mean_time": metric_delta_label(
+                    "mean_time_in_system_minutes",
+                    row.get("mean_time_in_system_minutes"),
+                ),
+                "change_vs_baseline": (
+                    "baseline"
+                    if scenario == baseline
+                    else metric_delta_label(
+                        "mean_time_in_system_minutes",
+                        row.get("mean_time_in_system_minutes_delta"),
+                        is_delta=True,
+                    )
+                ),
+                "MedRec_24h": metric_delta_label(
+                    "mean_medrec_within_24h_rate",
+                    row.get("mean_medrec_within_24h_rate"),
+                ),
+                "throughput": metric_delta_label("mean_throughput", row.get("mean_throughput")),
+                "stability": _friendly_status(row.get("typical_steady_state_status")),
+                "managerial_read": rank_row.get("category") or scenario_classification(scenario, group),
+            }
+        )
+    st.dataframe(pl.DataFrame(rows), width="stretch", hide_index=True)
+    st.caption(
+        "Scenario comparison uses the selected replicated experiment run. Single-run journey visuals explain mechanism, "
+        "not the headline scenario ranking."
+    )
+
+
 def _render_patient_time_chart(selected: dict, baseline_row: dict) -> None:
     st.subheader("Patient Time Comparison")
-    chart = pl.DataFrame(
-        {
-            "Metric": ["Mean patient time", "Mean patient time", "Worst queue wait", "Worst queue wait"],
-            "Case": ["Baseline", "Scenario", "Baseline", "Scenario"],
-            "Minutes": [
-                _to_float(baseline_row.get("mean_time_in_system_minutes")),
-                _to_float(selected.get("mean_time_in_system_minutes")),
-                _to_float(baseline_row.get("worst_queue_wait_minutes")),
-                _to_float(selected.get("worst_queue_wait_minutes")),
-            ],
-        }
+    metrics = ["Mean patient time", "Worst queue wait"]
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                name="Baseline",
+                x=metrics,
+                y=[
+                    _to_float(baseline_row.get("mean_time_in_system_minutes")),
+                    _to_float(baseline_row.get("worst_queue_wait_minutes")),
+                ],
+                marker_color="#64748b",
+            ),
+            go.Bar(
+                name="Scenario",
+                x=metrics,
+                y=[
+                    _to_float(selected.get("mean_time_in_system_minutes")),
+                    _to_float(selected.get("worst_queue_wait_minutes")),
+                ],
+                marker_color="#2563eb",
+            ),
+        ]
     )
-    st.bar_chart(chart, x="Metric", y="Minutes", color="Case")
+    fig.update_layout(
+        barmode="group",
+        height=340,
+        margin={"l": 8, "r": 8, "t": 16, "b": 8},
+        yaxis_title="Minutes",
+        legend_title_text="",
+    )
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
 def _render_flow_animation() -> None:
@@ -191,10 +272,10 @@ def _render_patient_journey(bundle, outputs_root: Path) -> None:
         elif "System animation" in plots:
             st.image(str(plots["System animation"]), caption="Sample system animation", width="stretch")
         else:
-            st.info("No sampled journey plot found for this policy.")
+            st.info("No sampled journey plot found for this assignment rule.")
     with col_story:
         if journeys.height == 0:
-            st.info("No sampled journey output found for this policy.")
+            st.info("No sampled journey output found for this assignment rule.")
             return
         patient_id = int(st.selectbox("Choose a sample patient", journeys["entity_id"].to_list()))
         row = journeys.filter(pl.col("entity_id") == patient_id).to_dicts()[0]
@@ -207,13 +288,14 @@ def _render_patient_journey(bundle, outputs_root: Path) -> None:
 
 
 def _render_plain_language_interpretation(scenario_info, selected: dict, baseline_row: dict, rank_row: dict) -> None:
-    st.subheader("What This Means")
+    st.subheader("Management Interpretation")
     bottleneck = selected.get("worst_queue_task", "the main queue")
     role = selected.get("highest_utilisation_role", "the highest-pressure role")
     category = rank_row.get("category", "an exploratory option") if rank_row else "an exploratory option"
     st.write(
-        f"This scenario is best read as **{category}**. The main visible bottleneck is **{bottleneck}**, "
-        f"and the highest-pressure staff group is **{role}**. {scenario_info.caveat}"
+        f"This scenario is best read as **{category}** in the **{scenario_info.family.lower()}** family. "
+        f"The main visible bottleneck is **{bottleneck}**, and the highest-pressure staff group is **{role}**. "
+        f"{scenario_info.caveat}"
     )
 
 
@@ -231,6 +313,17 @@ def _to_float(value) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _friendly_status(value) -> str:
+    text = str(value or "unknown").replace("_", " ")
+    if "not steady" in text:
+        return "Not steady"
+    if "closest" in text:
+        return "Closest to steady state"
+    if "steady" in text:
+        return "Approximately steady"
+    return text.title()
 
 
 if __name__ == "__main__":

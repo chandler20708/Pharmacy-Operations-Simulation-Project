@@ -83,9 +83,9 @@ def render_sidebar() -> AppContext | None:
         }
     )
 
-    st.sidebar.header("Run")
+    st.sidebar.header("Scenario Output")
     selected_policy = st.sidebar.selectbox(
-        "Assignment policy",
+        "Assignment rule",
         options=policies,
         index=policies.index("smart_dynamic") if "smart_dynamic" in policies else 0,
     )
@@ -121,7 +121,7 @@ def render_sidebar() -> AppContext | None:
         index=0,
     )
 
-    st.sidebar.header("Ranking")
+    st.sidebar.header("Decision Weights")
     preset = st.sidebar.selectbox("Weight preset", options=list(WEIGHT_PRESETS), index=0)
     st.sidebar.caption("Weights are normalized automatically.")
     base_weights = WEIGHT_PRESETS[preset]
@@ -146,12 +146,12 @@ def render_sidebar() -> AppContext | None:
 
 
 def _run_provenance(metadata: dict | None, selected_run: str) -> None:
-    with st.sidebar.expander("Run provenance", expanded=True):
+    with st.sidebar.expander("Output provenance", expanded=True):
         if not metadata:
             st.warning("No experiment metadata found.")
             st.caption(selected_run)
             return
-        st.write(f"Assignment policy: `{metadata.get('assignment_policy', 'unknown')}`")
+        st.write(f"Assignment rule: `{metadata.get('assignment_policy', 'unknown')}`")
         st.write(f"Replications: `{metadata.get('replications', '?')}`")
         st.write(
             f"Horizon: `{metadata.get('warmup_days', '?')}` warm-up, "

@@ -16,10 +16,10 @@ from components.stakeholder_controls import select_context
 from core.sample_outputs import daily_kpis, latest_sample_run, role_activity_window, task_events_window, window_summary
 
 
-st.set_page_config(page_title="Diagnostic Animation", layout="wide")
+st.set_page_config(page_title="Scenario Flow Viewer", layout="wide")
 
 
-METRIC_OPTIONS = {
+METRIC_OPTIONS: dict[str, str] = {
     "Mean backlog": "mean_total_backlog",
     "Mean queue wait": "mean_queue_wait_minutes",
     "Mean patient time": "mean_time_in_system_minutes",
@@ -50,8 +50,8 @@ POLICY_GUIDE = {
 
 
 def main() -> None:
-    st.title("Diagnostic Animation")
-    st.caption("Pick a KPI spike, then inspect the patient and staff interactions inside that simulated window.")
+    st.title("Scenario Flow Viewer")
+    st.caption("High-pressure simulated windows translated into patient queues, staff handoffs, and role bottlenecks.")
 
     context = select_context()
     if context is None:
@@ -60,10 +60,10 @@ def main() -> None:
     policy = (context.bundle.metadata or {}).get("assignment_policy", "smart_dynamic")
     run_dir = latest_sample_run(str(policy), outputs_root=context.data_source.outputs_root)
     if run_dir is None:
-        st.info("No detailed event-log run was found for this assignment policy.")
+        st.info("No detailed event-log sample was found for this assignment rule.")
         return
 
-    st.caption(f"Detailed event-log sample: {run_dir}")
+    st.caption(f"Event-log sample: {run_dir}")
     _render_window_investigation(run_dir)
     _render_conceptual_model()
     _render_policy_guide(str(policy))
@@ -72,7 +72,7 @@ def main() -> None:
 def _render_window_investigation(run_dir: Path) -> None:
     kpis = daily_kpis(run_dir)
     if kpis.height == 0:
-        st.info("No detailed KPI time-series output found for interactive window investigation.")
+        st.info("No detailed result time-series was found for window review.")
         return
 
     metric_label, metric, start_day, end_day, peak_day = _window_controls(kpis)
@@ -84,7 +84,7 @@ def _render_window_investigation(run_dir: Path) -> None:
     events = task_events_window(run_dir, start_day=start_day, end_day=end_day, limit=36)
     roles = role_activity_window(run_dir, start_day=start_day, end_day=end_day)
 
-    st.subheader("Patient And Staff Interactions In This Window")
+    st.subheader("Patient and Staff Interactions in This Window")
     st.write(
         "Each patient task appears first as queue waiting time, then as a staff interaction. "
         "Red queue bars point to long waits; coloured staff bars show which role picked up the work."
@@ -93,7 +93,7 @@ def _render_window_investigation(run_dir: Path) -> None:
 
     _render_diagnostic_read(events, roles, summary)
 
-    with st.expander("Raw trace for analysts"):
+    with st.expander("Event-log trace"):
         st.dataframe(events, width="stretch", hide_index=True)
         st.dataframe(roles, width="stretch", hide_index=True)
 
@@ -101,7 +101,7 @@ def _render_window_investigation(run_dir: Path) -> None:
 def _window_controls(kpis: pl.DataFrame) -> tuple[str, str, int, int, int]:
     control_metric, control_window = st.columns([1, 2])
     with control_metric:
-        metric_label = st.selectbox("KPI to inspect", list(METRIC_OPTIONS), index=0)
+        metric_label = st.selectbox("Scenario signal", list(METRIC_OPTIONS), index=0)
     metric = METRIC_OPTIONS[metric_label]
 
     counted = kpis.filter(pl.col("is_counted_period") == True) if "is_counted_period" in kpis.columns else kpis
@@ -120,7 +120,7 @@ def _window_controls(kpis: pl.DataFrame) -> tuple[str, str, int, int, int]:
             st.write(f"Selected simulated day: {min_day}")
         else:
             start_day, end_day = st.slider(
-                "Time window by simulated day",
+                "Simulated day window",
                 min_value=min_day,
                 max_value=max_day,
                 value=(default_start, default_end),
@@ -167,7 +167,7 @@ def _render_kpi_chart(
     st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
     st.caption(
         f"Selected window: simulated days {start_day} to {end_day}. "
-        f"The dotted marker shows the largest visible {metric_label.lower()} spike."
+        f"The dotted marker shows the largest visible {metric_label.lower()} pressure point."
     )
 
 
@@ -183,7 +183,7 @@ def _render_window_metrics(summary: dict[str, float]) -> None:
 
 
 def _render_diagnostic_read(events: pl.DataFrame, roles: pl.DataFrame, summary: dict[str, float]) -> None:
-    st.subheader("What To Look For")
+    st.subheader("Window Readout")
     col_story, col_roles = st.columns([1.3, 1])
     with col_story:
         st.write(_diagnostic_sentence(summary, events))
@@ -216,7 +216,7 @@ def _diagnostic_sentence(summary: dict[str, float], events: pl.DataFrame) -> str
     wait_text = "long waits are visible" if long_waits else "long waits are not dominant in the sampled trace"
     return (
         f"In this selected window, {flow_text}. Mean queue wait is about {mean_wait:.0f} minutes, "
-        f"and {wait_text}. If the chart spike is real operational pressure, it should appear as red queue "
+        f"and {wait_text}. If the selected pressure point reflects operational pressure, it should appear as red queue "
         "segments clustering before one or more staff-role lanes."
     )
 
@@ -236,7 +236,7 @@ def _long_wait_events(events: pl.DataFrame) -> list[dict]:
 
 
 def _render_conceptual_model() -> None:
-    with st.expander("Conceptual Process Map Used By The Animation", expanded=True):
+    with st.expander("Report Process Boundary Used By The Viewer", expanded=True):
         st.graphviz_chart(
             """
 digraph {
@@ -286,13 +286,14 @@ digraph {
             width="stretch",
         )
         st.write(
-            "Patients remain a single entity. The animation shows the operational part of this map: "
-            "a task enters a visible queue, an eligible staff member starts it, and the patient then moves to the next pathway step."
+            "This matches the report boundary: pharmacy-controlled tasks are modelled explicitly, while wider hospital "
+            "diagnosis, prescribing and discharge processes enter only where they generate pharmacy workload. Patients "
+            "remain a single entity moving from queued task to eligible staff member to the next pathway step."
         )
 
 
 def _render_policy_guide(selected_policy: str) -> None:
-    st.subheader("Assignment Policy Guide")
+    st.subheader("Assignment Rule Guide")
     cols = st.columns(4)
     for column, key in zip(cols, ["priority", "dynamic", "smart_dynamic", "random"]):
         title, body = POLICY_GUIDE[key]

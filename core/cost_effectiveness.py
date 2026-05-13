@@ -390,15 +390,23 @@ def _classify(row: dict) -> str:
     risk = row["governance_risk"]
     if group == "E":
         return "Stress-test only"
+    if risk >= 4 and benefit < 0.35:
+        return "Governance-sensitive"
     if risk >= 4:
-        return "Risky / governance-heavy"
+        return "Governance-sensitive improvement"
     if benefit >= 0.65 and cost <= 6:
         return "Strong candidate"
     if benefit >= 0.35 and cost <= 4:
         return "Cost-effective quick win"
     if benefit >= 0.65 and cost > 6:
-        return "High-impact but costly"
-    return "Not attractive"
+        return "High-impact, higher effort"
+    if benefit >= 0.35 and cost > 6:
+        return "Material improvement, higher effort"
+    if benefit >= 0.20:
+        return "Material improvement"
+    if benefit > 0.05:
+        return "Limited improvement"
+    return "No clear benefit"
 
 
 def _to_float(value) -> float:

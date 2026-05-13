@@ -130,7 +130,7 @@ def assumption_delta_rows(
         ]
 
     rows = [
-        _compare("Assignment policy", base, selected, ("settings", "assignment_policy")),
+        _compare("Assignment rule", base, selected, ("settings", "assignment_policy")),
         _compare("Weekday close hour", base, selected, ("settings", "close_hour")),
         _compare("Saturday availability", base, selected, ("settings", "saturday_availability_multiplier")),
         _compare("Sunday availability", base, selected, ("settings", "sunday_availability_multiplier")),

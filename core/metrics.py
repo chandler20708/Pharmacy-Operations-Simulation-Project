@@ -203,12 +203,12 @@ def diagnostics_table(summary: pl.DataFrame, queue_lengths: pl.DataFrame | None,
     for key, label, unit in metrics:
         base = selected.get(baseline, {}).get(key)
         value = selected.get(scenario, {}).get(key)
-        rows.append({"diagnostic": label, "baseline": base, "scenario": value, "unit": unit})
+        rows.append({"signal": label, "baseline": base, "scenario": value, "unit": unit})
     if queue_lengths is not None and queue_lengths.height:
         for name, label in (("mean_queue_length", "Mean visible queue length"), ("mean_max_queue_length", "Mean max visible queue length")):
             base_value = _max_queue_metric(queue_lengths, baseline, name)
             scenario_value = _max_queue_metric(queue_lengths, scenario, name)
-            rows.append({"diagnostic": label, "baseline": base_value, "scenario": scenario_value, "unit": "patients"})
+            rows.append({"signal": label, "baseline": base_value, "scenario": scenario_value, "unit": "patients"})
     return pl.DataFrame(rows)
 
 
@@ -225,7 +225,7 @@ def steady_state_interpretation(summary: pl.DataFrame, *, scenario: str) -> dict
     elif "closest" in status.lower() or "steady" in status.lower():
         report_use = "acceptable scenario evidence"
     else:
-        report_use = "review diagnostics before report use"
+        report_use = "review run status before report use"
 
     return {
         "selected_scenario": scenario,

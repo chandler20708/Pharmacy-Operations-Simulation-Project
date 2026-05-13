@@ -98,7 +98,7 @@ def _run_text(metadata: dict | None) -> str:
     if not metadata:
         return "Run metadata was not available; verify assignment policy and replication design before use."
     return (
-        f"Assignment policy `{metadata.get('assignment_policy', 'unknown')}`, "
+        f"Assignment rule `{metadata.get('assignment_policy', 'unknown')}`, "
         f"{metadata.get('replications', '?')} replications, "
         f"{metadata.get('warmup_days', '?')} warm-up days, "
         f"{metadata.get('counted_days', '?')} counted days, "

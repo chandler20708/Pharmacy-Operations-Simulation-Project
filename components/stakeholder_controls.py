@@ -63,7 +63,7 @@ def select_context() -> StakeholderContext | None:
     control_a, control_b = st.columns([1, 2])
     with control_a:
         policy = st.selectbox(
-            "Test control: assignment policy",
+            "Assignment rule",
             options=policies,
             index=policies.index(default_policy),
         )
@@ -78,13 +78,13 @@ def select_context() -> StakeholderContext | None:
     baseline, scenario, labels = _scenario_selection(bundle)
     with control_b:
         scenario = st.selectbox(
-            "Test control: strategy scenario",
+            "Management scenario",
             options=[name for name in scenario_names(bundle.summary) if name != baseline],
             format_func=lambda value: labels.get(value, value),
             index=0,
         )
 
-    with st.expander("Advanced run selection"):
+    with st.expander("Advanced output selection"):
         selected_run = st.selectbox(
             "Output run",
             options=policy_runs,

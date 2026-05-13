@@ -44,7 +44,7 @@ class DataSource:
 
 def select_data_source() -> DataSource | None:
     with st.sidebar:
-        st.markdown("### Data Source")
+        st.markdown("### Scenario Data")
         mode = st.radio(
             "Use bundled data or upload a replacement ZIP",
             options=["Bundled demo data", "Upload ZIP"],
@@ -88,7 +88,7 @@ def _uploaded_source(upload_bytes: bytes, filename: str) -> DataSource:
     scenario_errors = validate_scenario_root(_scenario_root(root))
     if scenario_errors:
         detail = "; ".join(scenario_errors[:8])
-        raise ValueError(f"Upload rejected: scenario schema check failed. {detail}")
+        raise ValueError(f"Upload rejected: required scenario columns are missing. {detail}")
     source = _build_source(root, label=f"Uploaded ZIP: {filename}")
     if source is None:
         raise ValueError(
@@ -122,7 +122,7 @@ def _build_source(outputs_root: Path, *, label: str) -> DataSource | None:
         scenario_root=scenario_root,
         sample_root=sample_root,
         strategy_proxy_path=strategy_proxy_path,
-        validation_summary=f"Scenario tables verified. {sample_note}",
+        validation_summary=f"Scenario tables loaded. {sample_note}",
     )
 
 

@@ -55,14 +55,14 @@ CSV files are retained only as a fallback for older experiment folders.
 
 The app also reads `experiment_metadata.json` when present to show assignment policy, replication count, warm-up/counted/drain days, seed, and scenario selection.
 
-For the diagnostic animation, bundled or uploaded data can also include detailed sample logs under a folder such as `outputs/scenario_baseline_smart_dynamic/<run-folder>/` with:
+For the Scenario Flow Viewer, bundled or uploaded data can also include detailed sample logs under a folder such as `outputs/scenario_baseline_smart_dynamic/<run-folder>/` with:
 
 - `events_patient_journey.parquet`
 - `events_task.parquet`
 - `timeseries_daily_kpis.parquet`
 - `timeseries_worker_daily_utilisation.parquet`
 
-CSV versions are accepted as fallbacks. If detailed logs are not present, the executive overview still works but the diagnostic animation page will report that no detailed event-log sample is available.
+CSV versions are accepted as fallbacks. If detailed logs are not present, the executive overview still works but the Scenario Flow Viewer will report that no detailed event-log sample is available.
 
 ## Current Stakeholder View
 
@@ -70,11 +70,11 @@ The app is intentionally a two-page stakeholder view. It avoids exposing the ful
 
 The visible workflow is:
 
-1. Select assignment policy: `priority`, `dynamic`, `smart_dynamic`, or `random` when those runs exist.
-2. Select a strategy scenario.
-3. Use `Executive Overview` for the decision line, key metrics, patient-time comparison, and one sampled patient journey.
-4. Use `Diagnostic Animation` to choose a KPI spike and inspect patient/staff interactions in that simulated time window.
-5. Open analyst expanders only when assumption deltas, diagnostics, or raw traces are needed.
+1. Select assignment rule: `priority`, `dynamic`, `smart_dynamic`, or `random` when those runs exist.
+2. Select a management scenario.
+3. Use `Executive Overview` for the decision line, all-scenario results table, key metrics, patient-time comparison, and one sampled patient journey.
+4. Use `Scenario Flow Viewer` to inspect patient/staff interactions in a high-pressure simulated time window.
+5. Open detail expanders only when assumption deltas, run status, or event traces are needed.
 
 This is a deliberate simplification from the earlier analyst-heavy multipage version. Stakeholders see the process and patient experience first; analysts can still inspect detailed tables in expanders.
 
@@ -87,8 +87,8 @@ Cost-effectiveness is proxy-based unless real cost data are supplied later. The 
 From `des_model`:
 
 ```bash
-.venv/bin/python -m py_compile app/Executive_Overview.py app/pages/1_Diagnostic_Animation.py app/core/*.py app/components/*.py
-.venv/bin/python -m pytest tests/test_app_services.py
+.venv/bin/python -m py_compile app/Executive_Overview.py app/pages/1_Scenario_Flow_Viewer.py app/core/*.py app/components/*.py
+PYTHONPATH=.:app .venv/bin/python -m pytest tests/test_app_services.py
 ```
 
 ## Known Limitations
